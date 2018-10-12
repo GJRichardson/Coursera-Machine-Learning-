@@ -1,0 +1,95 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(tree)
+library(tinytex)
+library(leaps)
+library(ElemStatLearn)
+library(ggplot2)
+library(caret)
+library(ISLR)
+library(ElemStatLearn)
+library(kernlab)
+library(randomForest)
+```
+
+#Machine Learning - Prediction Assignment
+###Garrett Richardson
+
+
+##The Goal of this project is to quantify how well people do a particular activity.  In this case, we will take observations on the manner in which poeple exericse and grade them as follows: A - Exact to Specification, B - Throwing Elbows Out Front, C - Lifting Halfway, D = Lowering Halfway, E - Throwing Hips to the Front
+
+
+##First, we must read in the Datafile
+```{r, fig.show='hide'}
+exercise <- read.csv("pml-training.csv", header=TRUE)
+```
+
+##Next we separate the datasets using cross-validation.  75% training, 25% testing.
+```{R}
+inTrain <-createDataPartition(y=exercise$classe, p=0.75, list=FALSE)
+training <- exercise[inTrain,]
+testing <- exercise[-inTrain,]
+dim(training)
+dim(testing)
+```
+##Cleaning the dataset.  We create a new table with the variables we have chosen to use.  We choose six variables based on their complete set of data, no NA values.
+```{R}
+exercise <- subset(exercise, select=c(classe,total_accel_belt, total_accel_forearm, total_accel_arm, total_accel_dumbbell))
+```
+##We partitition again on  new this dataset as well via cross-validation.
+```{R}
+inTrain <-createDataPartition(y=exercise$classe, p=0.75, list=FALSE)
+training <- exercise[inTrain,]
+testing <- exercise[-inTrain,]
+```
+
+##We have now created a new data set which we will be using going forward to build our prediciton model.We will use K Folds sampling to created 20 folds for our 20 predictions.
+```{r}
+set.seed(32323)
+folds <- createFolds(y=training$classe, k=20, list=TRUE, returnTrain=TRUE)
+sapply(folds,length)
+```
+##The aforementioned represent the 20 folds we have created and their length.  Now we will create 20 datasets through resampling.
+```{r}
+set.seed(32323)
+folds <- createResample(y=training$classe, times=20, list=TRUE)
+sapply(folds, length)
+```
+
+##We have just displayed a couple of cross-validation techniques.
+
+##Now we will displays some figures to show data relationships.
+
+###Creating a Feature Plot
+```{r}
+featurePlot(x=training[,c("classe","total_accel_belt", "total_accel_forearm", "total_accel_arm", "total_accel_dumbbell")],
+            y = training$classe, plot="pairs")
+```
+###Create a Qplot
+```{r}
+qplot(classe,total_accel_belt,colour=classe, data=training)
+plot
+```
+
+##Now let's make a prediction and find the error rate on 20 different test cases.
+##First we train, then we test and produce an Out of Sample Error.
+```{r}
+inTrain <- createDataPartition(y=exercise$classe, p=0.5, list=FALSE)
+trainexercise <- exercise[inTrain,]
+testexercise <- exercise[-inTrain,]
+lml <- lm(classe ~., data=testexercise)
+plot(trainexercise$classe, trainexercise$total_accel_arm, pch=19, col="blue", xlab="Classe", ylab="Arm Acceleration")
+predicted <- predict(lml, testexercise[21:1000, ], type = "response")
+testexercise$classe = as.numeric(testexercise$classe)
+actual <- testexercise[21:1000, "classe" ]
+sqrt(mean(predicted - actual)^2) 
+```
